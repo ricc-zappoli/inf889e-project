@@ -28,11 +28,14 @@ If you want to use your own data:
 
 The two datasets provided are described below.
 
-#### `full` set
-This set contains all complete ("full") genomes available on the Los Alamos HIV Database, with one file for each region. There are huge disparities between regions, ranging from nearly 5000 records for North America to about 40 for the Caribbean or Oceania. In addition, there are no sequences from Central America.
+#### `complete` set
+This set contains all complete genomes available on the Los Alamos HIV Database, with one file for each region. There are huge disparities between regions, ranging from more than 5000 records for North America to about 40 for the Caribbean or Oceania. In addition, there are no sequences from Central America.
 
-#### `mix` set
+#### `mixed` set
 This set contains all the previously mentioned files that include more than 600 records, but a more flexible version of the others regions, tolerating some non-complete genomes to make up for the disparities. This allows for the inclusion of Central America, and a more evenly distributed dataset to be processed.
+
+#### `unaligned` set
+This set contains all complete genomes available on the Los Alamos HIV Database, with one file for each region and without alignement. While the first idea of the projet was to work with unaligned sequences, it quickly became clear that this does not work, as removing alignement will make-up new k-mers out of thin air and mess up with the classification process.
 
 ## Important variables
 At the beginning of the script, there are some variables you may want to have a look at:

@@ -26,7 +26,7 @@ If you want to use your own data:
     * You can also get only one file and later chose to use the countries as the target classes
 * They must have the default Los Alamos HIV Database header, which is: `>Subtype.Country.Year.Name.Accession`
 
-The two datasets provided are described below, but it should be noted that in both cases the North American region file was stripped of some US records as it exceeded the maximum size allowed on GitHub.
+The two datasets provided are described below.
 
 #### `full` set
 This set contains all complete ("full") genomes available on the Los Alamos HIV Database, with one file for each region. There are huge disparities between regions, ranging from nearly 5000 records for North America to about 40 for the Caribbean or Oceania. In addition, there are no sequences from Central America.

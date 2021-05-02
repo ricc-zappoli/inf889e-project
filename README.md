@@ -10,7 +10,7 @@ Before trying to run the script or notebook, you need to install the required de
 pip install joblib
 pip install numpy
 pip install pandas
-pip install progressbar
+pip install progressbar2
 pip install bio
 pip install sklearn
 pip install mpl_toolkits

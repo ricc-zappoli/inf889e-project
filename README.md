@@ -18,7 +18,7 @@ pip install dna_features_viewer
 pip install matplotlib
 pip install seaborn
 ```
-Note that *Biopython* also requires Visual Studio C++ development tools.
+Note that *Biopython* also requires Visual C++ Build Tools.
 ### Data
 Data samples are already included in the source code, in the folder `data`. 
 If you want to use your own data:

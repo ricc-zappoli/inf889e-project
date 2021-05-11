@@ -34,9 +34,9 @@ import seaborn as sns
 
 # Scope of classification: if "ALL", classify by region globaly
 # If AFR, ASI, CAM, CRB, EUR, FSU, MEA, NAM, OCE or SAM, classify by country within this chosen region 
-scope = "AFR"
+scope = "ALL"
 # Access path for the FASTA files (one file for each region)
-path = "data/" + "full"
+path = "data/" + "complete"
 # Name of trained model when saving
 model_name = "model.pkl"
 # For sampling purposes: will process max n sequences for each target class
@@ -52,7 +52,9 @@ split_raito = 0.8
 # Dimensions for graphs (2D or 3D)
 n_components = 3
 # Set maximum number of incorrect records to analyse at the end
-max_incorrect = 4
+max_incorrect = 10
+# Set maximum number of correct records to compute alignment with at the end
+max_correct = 100
 # Set the length k of the features based on k-mers
 k = 5
 
@@ -84,7 +86,7 @@ if scope == "ALL":
     # Used to show progress
     progress = ProgressBar()
     # If scope is ALL, each filename is the name of each region used as a target class
-    for filename in progress(listdir(path)):
+    for filename in progress(sorted(listdir(path))):
         target = filename.split('.')[0]
         for record in SeqIO.parse(path + "/" + filename, "fasta"):
             add_record(record, target)
@@ -449,7 +451,7 @@ print("Prediction:", predictions)
 print("ACGT percent:", acgt_percents)
 
 # Compute the confusion matrix
-matrix = confusion_matrix(y_true = y_test, y_pred = y_pred)
+matrix = confusion_matrix(y_true = y_test, y_pred = y_pred, labels=sorted(targets.keys()))
 # Build the heatmap
 fig, ax = plt.subplots(figsize=(15, 10))
 sns.heatmap(matrix, 
@@ -457,8 +459,8 @@ sns.heatmap(matrix,
             annot = True, 
             fmt = ".0f", 
             linewidth = 0.1, 
-            xticklabels = targets.keys(), 
-            yticklabels = targets.keys())
+            xticklabels = sorted(targets.keys()), 
+            yticklabels = sorted(targets.keys()))
 plt.title("Confusion matrix")
 plt.xlabel("Predicted label")
 plt.ylabel("True label")
@@ -494,63 +496,13 @@ fig, ax = plt.subplots(figsize=(15, 20))
 sns.heatmap(matrix, 
             annot = True, 
             fmt = ".0f", 
-            cmap = 'Blues',
+            cmap = 'Blues_r',
             linewidth = 0.1, 
             xticklabels = targets.keys(), 
             yticklabels = features.instances)
 plt.title("Percentage of presence of k-mers according to HIV subtypes")
 plt.xlabel("Target")
 plt.ylabel("Features")
-plt.show()
-
-# Compute alignement of all incorrect records to all correct record and compute avegarge of scores
-print("\nComparison of alignement scores between true and predicted class:")
-ids = []
-matrix = []
-# Used to show progress
-progress = ProgressBar(max_value=len(incorrect_data[0:max_incorrect])*len(correct_data)).start()
-count = 0
-# Iterate through incorrect data
-for i in incorrect_data[0:max_incorrect]:
-    # Keep different averages for same target class and predicted target class of incorrect record
-    true_score_sum = 0
-    true_score_nb = 0
-    pred_score_sum = 0
-    pred_score_nb = 0
-    # Iterate through correct data
-    for c in correct_data:
-        # Compare only if both records are somewhat in the same category (both same subtype and acgt-percentage range)
-        if i.annotations["subtype"] == c.annotations["subtype"] and i.annotations["acgt-percent"] == c.annotations["acgt-percent"]:
-            # If this correct record is in the same class as current incorrect record
-            if i.annotations["target"] == c.annotations["target"]:
-                true_score_sum += pairwise2.align.globalxx(i.seq, c.seq, score_only=True)
-                true_score_nb += 1
-            # If this correct record is in the class that the current incorrect record has been predicted to
-            if i.annotations["prediction"] == c.annotations["target"]:
-                pred_score_sum += pairwise2.align.globalxx(i.seq, c.seq, score_only=True)
-                pred_score_nb += 1
-        # Used to show progress
-        count += 1
-        progress.update(count)
-    # Compute avergare only if similar correct records are found (avoid div per 0)
-    if true_score_nb != 0 and pred_score_nb != 0:
-        ids.append(i.id)
-        matrix.append([true_score_sum/true_score_nb, pred_score_sum/pred_score_nb])
-# Normalise results
-matrix = pd.DataFrame(np.array(matrix))
-matrix = matrix.div(matrix.max(axis=1), axis=0)
-# Build the heatmap
-fig, ax = plt.subplots()
-sns.heatmap(matrix, 
-            #annot = True, 
-            #fmt = ".0f", 
-            linewidth = 0.1,
-            cmap = 'Blues',
-            xticklabels = ["True", "Prediction"], 
-            yticklabels = ids)
-plt.title("Comparison of alignement scores between true and predicted class")
-plt.xlabel("Target")
-plt.ylabel("ID")
 plt.show()
 
 # For all incorrect records, compute average feature vectors of all correct records for both true and predicted classes
@@ -561,13 +513,13 @@ for i_data, i_features in zip(incorrect_data[0:max_incorrect], incorrect_feature
     # Iterate through correct records
     for c_data, c_features in zip(correct_data, correct_features):
         # Compare only if both records are somewhat similar (either same subtype or acgt-percentage range)
-        if i_data.annotations["subtype"] == c_data.annotations["subtype"] or i_data.annotations["acgt-percent"] == c_data.annotations["acgt-percent"]:
-            # If this correct record is in the same class as current incorrect record
-            if i_data.annotations["target"] == c_data.annotations["target"]:
-                true_features.append(c_features)
-            # If this correct record is in the class that the current incorrect record has been predicted to  
-            if i_data.annotations["prediction"] == c_data.annotations["target"]:
-                pred_features.append(c_features)
+        #if i_data.annotations["subtype"] == c_data.annotations["subtype"] or i_data.annotations["acgt-percent"] == c_data.annotations["acgt-percent"]:
+        # If this correct record is in the same class as current incorrect record
+        if i_data.annotations["target"] == c_data.annotations["target"]:
+            true_features.append(c_features)
+        # If this correct record is in the class that the current incorrect record has been predicted to  
+        if i_data.annotations["prediction"] == c_data.annotations["target"]:
+            pred_features.append(c_features)
     # Compute avergare matrices only if similar correct records are found (avoid div per 0)
     if len(true_features) != 0 and len(pred_features) != 0:
         true_features_mean = np.array(true_features).mean(axis=0)
@@ -618,12 +570,64 @@ for i_data, i_features in zip(incorrect_data[0:max_incorrect], incorrect_feature
                 #annot = True, 
                 #fmt = ".0f", 
                 linewidth = 0.1,
-                cmap = 'Blues',
+                cmap = 'Blues_r',
                 xticklabels = features.instances,
                 yticklabels = ["True", "Incorrect", "Prediction"],)
         plt.title("Comparaison of incorrect features vector with true and predicted vectors of occurences percents")
         plt.xlabel("Features")
         plt.show()
+
+# Compute alignement of all incorrect records to all correct record and compute avegarge of scores
+print("\nComparison of alignement scores between true and predicted class:")
+ids = []
+matrix = []
+# Used to show progress
+progress = ProgressBar(max_value=len(incorrect_data[0:max_incorrect])*len(correct_data[0:max_correct])).start()
+count = 0
+# Shuffle correct data (when we're sampling it)
+shuffle(correct_data)
+# Iterate through incorrect data
+for i in incorrect_data[0:max_incorrect]:
+    # Keep different averages for same target class and predicted target class of incorrect record
+    true_score_sum = 0
+    true_score_nb = 0
+    pred_score_sum = 0
+    pred_score_nb = 0
+    # Iterate through correct data
+    for c in correct_data[0:max_correct]:
+        # Compare only if both records are somewhat in the same category (both same subtype and acgt-percentage range)
+        #if i.annotations["subtype"] == c.annotations["subtype"] and i.annotations["acgt-percent"] == c.annotations["acgt-percent"]:
+        # If this correct record is in the same class as current incorrect record
+        if i.annotations["target"] == c.annotations["target"]:
+            true_score_sum += pairwise2.align.globalxx(i.seq, c.seq, score_only=True)
+            true_score_nb += 1
+        # If this correct record is in the class that the current incorrect record has been predicted to
+        if i.annotations["prediction"] == c.annotations["target"]:
+            pred_score_sum += pairwise2.align.globalxx(i.seq, c.seq, score_only=True)
+            pred_score_nb += 1
+        # Used to show progress
+        count += 1
+        progress.update(count)
+    # Compute avergare only if similar correct records are found (avoid div per 0)
+    if true_score_nb != 0 and pred_score_nb != 0:
+        ids.append(i.id)
+        matrix.append([true_score_sum/true_score_nb, pred_score_sum/pred_score_nb])
+# Normalise results
+matrix = pd.DataFrame(np.array(matrix))
+matrix = matrix.div(matrix.max(axis=1), axis=0)
+# Build the heatmap
+fig, ax = plt.subplots()
+sns.heatmap(matrix, 
+            #annot = True, 
+            #fmt = ".0f", 
+            linewidth = 0.1,
+            cmap = 'Blues',
+            xticklabels = ["True", "Prediction"], 
+            yticklabels = ids)
+plt.title("Comparison of alignement scores between true and predicted class")
+plt.xlabel("Target")
+plt.ylabel("ID")
+plt.show()
 
 # Tried something, did not work yet...
 
